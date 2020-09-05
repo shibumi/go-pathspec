@@ -25,7 +25,7 @@ import (
 	"strings"
 )
 
-type GitIgnorePattern struct {
+type gitIgnorePattern struct {
 	Regex   string
 	Include bool
 }
@@ -101,8 +101,8 @@ func GitIgnore(content io.Reader, name string) (ignore bool, err error) {
 	return ignore, scanner.Err()
 }
 
-func parsePattern(pattern string) *GitIgnorePattern {
-	p := &GitIgnorePattern{}
+func parsePattern(pattern string) *gitIgnorePattern {
+	p := &gitIgnorePattern{}
 
 	// An optional prefix "!" which negates the pattern; any matching file
 	// excluded by a previous pattern will become included again.
