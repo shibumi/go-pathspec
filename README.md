@@ -1,4 +1,5 @@
-#go-pathspec
+# go-pathspec
+
 [![build](https://github.com/shibumi/go-pathspec/workflows/build/badge.svg)](https://github.com/shibumi/go-pathspec/actions?query=workflow%3Abuild) [![Coverage Status](https://coveralls.io/repos/github/shibumi/go-pathspec/badge.svg)](https://coveralls.io/github/shibumi/go-pathspec)
 
 go-pathspec implements gitignore-style pattern matching for paths.
