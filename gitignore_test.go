@@ -24,8 +24,8 @@ import (
 
 func TestGitIgnore(t *testing.T) {
 	files_to_include := []string{"!.#test", "~foo", "foo/foo.txt", "bar/foobar.txt", "foo/bar.txt", "/bar/foo"}
-	files_to_ignore := []string{".#test", "foo/#test#", "foo/bar/.foo.txt.swp", "foo/foobar/foobar.txt", "foo.txt", "test/foo.test", "test/foo/bar.test", "foo/bar", "foo/1/2/bar"}
-	content := []byte(".#*\n\\#*#\n.*.sw[a-z]\n**/foobar/foobar.txt\n/foo.txt\ntest/\nfoo/**/bar\n/b[^a]r/foo")
+	files_to_ignore := []string{".#test", "foo/#test#", "foo/bar/.foo.txt.swp", "foo/foobar/foobar.txt", "foo.txt", "test/foo.test", "test/foo/bar.test", "foo/bar", "foo/1/2/bar", "foo/foobar/abcd.txt"}
+	content := []byte(".#*\n\\#*#\n.*.sw[a-z]\n**/foobar/foobar.txt\n/foo.txt\ntest/\nfoo/**/bar\n/b[^a]r/foo\nabcd.txt")
 
 	for _, f := range files_to_include {
 		match, err := GitIgnore(bytes.NewReader(content), f)
