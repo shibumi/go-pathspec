@@ -34,7 +34,7 @@ func TestGitIgnore(t *testing.T) {
 			t.Fatalf("Received an unexpected error: %s", err)
 		}
 		if match {
-			t.Errorf("ChefIgnore('%s', %s) returned '%v', want 'false'", strings.Replace(string(content), "\n", ", ", -1), f, match)
+			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'false'", strings.Replace(string(content), "\n", ", ", -1), f, match)
 		}
 	}
 
@@ -44,7 +44,7 @@ func TestGitIgnore(t *testing.T) {
 			t.Fatalf("Received an unexpected error: %s", err)
 		}
 		if !match {
-			t.Errorf("ChefIgnore('%s', %s) returned '%v', want 'true'", strings.Replace(string(content), "\n", ", ", -1), f, match)
+			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'true'", strings.Replace(string(content), "\n", ", ", -1), f, match)
 		}
 	}
 }
