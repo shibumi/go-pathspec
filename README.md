@@ -1,13 +1,43 @@
-go-pathspec
-===========
+#go-pathspec
 
-A package for pattern matching of file paths. Currently the gitignore and chefignore patterns are included in the package.
+go-pathspec implements gitignore-style pattern matching for paths.
 
-## Author
+## Alternatives
 
-Sander van Harmelen (<sander@xanzy.io>)
+There are a few alternatives, that try to be gitignore compatible or even state
+gitignore compatibility:
 
-## License
+### https://github.com/go-git/go-git
 
-The file 'chefignore.go' is a customized version of <https://code.google.com/p/go/source/browse/src/pkg/path/match.go> which is licensed under a BSD-style license. See the file header and/or the GO-LICENSE file for more info.
-The rest of the package is licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at <http://www.apache.org/licenses/LICENSE-2.0>
+go-git states it would be gitignore compatible, but actually they are missing a few
+special cases. This issue describes one of the not working patterns: https://github.com/go-git/go-git/issues/108
+
+What does not work is global filename pattern matching. Consider the following
+`.gitignore` file:
+
+```gitignore
+# gitignore test file
+parse.go
+```
+
+Then `parse.go` should match on all filenames called `parse.go`. You can test this via
+this shell script:
+```shell
+mkdir -p /tmp/test/internal/util
+touch /tmp/test/internal/util/parse.go
+cd /tmp/test/
+git init
+echo "parse.go" > .gitignore
+```
+
+With git `parse.go` will be excluded. The go-git implementation behaves different.
+
+### https://github.com/monochromegane/go-gitignore
+
+monochromegane's go-gitignore does not support the use of `**`-operators.
+This is not consistent to real gitignore behavior, too.
+
+## Authors
+
+Sander van Harmelen (<sander@xanzy.io>)  
+Christian Rebischke (<chris@shibumi.dev>)
