@@ -23,8 +23,8 @@ import (
 
 func TestGitIgnore(t *testing.T) {
 	toInclude := []string{"!.#test", "~foo", "foo/foo.txt", "bar/foobar.txt", "foo/bar.txt", "/bar/foo"}
-	toIgnore := []string{".#test", "foo/#test#", "foo/bar/.foo.txt.swp", "foo/foobar/foobar.txt", "foo.txt", "test/foo.test", "test/foo/bar.test", "foo/bar", "foo/1/2/bar", "foo/foobar/abcd.txt"}
-	content := []string{".#*", "\\#*#", ".*.sw[a-z]", "**/foobar/foobar.txt", "/foo.txt", "test/", "foo/**/bar", "/b[^a]r/foo", "abcd.txt"}
+	toIgnore := []string{".#test", "foo/#test#", "foo/bar/.foo.txt.swp", "foo/foobar/foobar.txt", "foo.txt", "test/foo.test", "test/foo/bar.test", "foo/bar", "foo/1/2/bar", "foo/foobar/abcd.txt", "foo/shibumi/test.txt"}
+	content := []string{".#*", "\\#*#", ".*.sw[a-z]", "**/foobar/foobar.txt", "/foo.txt", "test/", "foo/**/bar", "/b[^a]r/foo", "abcd.txt", "shibumi/"}
 
 	for _, f := range toInclude {
 		match, err := GitIgnore(content, f)
