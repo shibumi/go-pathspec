@@ -15,19 +15,9 @@
 // limitations under the License.
 //
 
-package pathspec
-
-import (
-	"bytes"
-	"regexp"
-	"strings"
-)
-
-type gitIgnorePattern struct {
-	Regex   string
-	Include bool
-}
-
+// Package pathspec implements git compatible gitignore pattern matching.
+// See the description below, if you are unfamiliar with it:
+//
 // A blank line matches no files, so it can serve as a separator for readability.
 //
 // A line starting with # serves as a comment. Put a backslash ("\") in front of
@@ -75,7 +65,23 @@ type gitIgnorePattern struct {
 // directories. For example, "a/**/b" matches "a/b", "a/x/b", "a/x/y/b" and so on.
 //
 // Other consecutive asterisks are considered invalid.
+package pathspec
 
+import (
+	"bufio"
+	"bytes"
+	"io"
+	"regexp"
+	"strings"
+)
+
+type gitIgnorePattern struct {
+	Regex   string
+	Include bool
+}
+
+// GitIgnore uses a string slice of patterns for matching on a filepath string.
+// On match it returns true, otherwise false. On error it passes the error through.
 func GitIgnore(patterns []string, name string) (ignore bool, err error) {
 	for _, pattern := range patterns {
 		p := parsePattern(pattern)
@@ -91,6 +97,34 @@ func GitIgnore(patterns []string, name string) (ignore bool, err error) {
 		}
 	}
 	return ignore, nil
+}
+
+// ReadGitIgnore implements the io.Reader interface for reading a gitignore file
+// line by line. It behaves exactly like the GitIgnore function. The only difference
+// is that GitIgnore works on a string slice.
+//
+// ReadGitIgnore returns a boolean value if we match or not and an error.
+func ReadGitIgnore(content io.Reader, name string) (ignore bool, err error) {
+	scanner := bufio.NewScanner(content)
+
+	for scanner.Scan() {
+		pattern := strings.TrimSpace(scanner.Text())
+		if len(pattern) == 0 || pattern[0] == '#' {
+			continue
+		}
+		p := parsePattern(pattern)
+		match, err := regexp.MatchString(p.Regex, name)
+		if err != nil {
+			return ignore, err
+		}
+		if match {
+			if p.Include {
+				return false, scanner.Err()
+			}
+			ignore = true
+		}
+	}
+	return ignore, scanner.Err()
 }
 
 func parsePattern(pattern string) *gitIgnorePattern {
