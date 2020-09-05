@@ -1,5 +1,6 @@
 //
 // Copyright 2014, Sander van Harmelen
+// Copyright 2020, Christian Rebischke
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
