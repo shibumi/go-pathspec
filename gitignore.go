@@ -137,7 +137,7 @@ func parsePattern(pattern string) *GitIgnorePattern {
 
 	// A pattern ending with a slash ('/') will match all descendant
 	// paths of if it is a directory but not if it is a regular file.
-	// This is equivilent to "{pattern}/**". So, set last segment to
+	// This is equivalent to "{pattern}/**". So, set last segment to
 	// double asterisks to include all descendants.
 	if patternSegs[len(patternSegs)-1] == "" {
 		patternSegs[len(patternSegs)-1] = "**"
@@ -217,7 +217,7 @@ func translateGlob(glob string) string {
 			// a slash).
 			regex.WriteString("[^/]")
 		case char == '[':
-			regex.WriteString(translateBraketExpression(&i, glob))
+			regex.WriteString(translateBracketExpression(&i, glob))
 		default:
 			// Regular character, escape it for regex.
 			regex.WriteString(regexp.QuoteMeta(string(char)))
@@ -226,28 +226,28 @@ func translateGlob(glob string) string {
 	return regex.String()
 }
 
-// Braket expression wildcard. Except for the beginning
-// exclamation mark, the whole braket expression can be used
+// Bracket expression wildcard. Except for the beginning
+// exclamation mark, the whole bracket expression can be used
 // directly as regex but we have to find where the expression
 // ends.
-// - "[][!]" matchs ']', '[' and '!'.
-// - "[]-]" matchs ']' and '-'.
-// - "[!]a-]" matchs any character except ']', 'a' and '-'.
-func translateBraketExpression(i *int, glob string) string {
+// - "[][!]" matches ']', '[' and '!'.
+// - "[]-]" matches ']' and '-'.
+// - "[!]a-]" matches any character except ']', 'a' and '-'.
+func translateBracketExpression(i *int, glob string) string {
 	regex := string(glob[*i])
 	*i++
 	j := *i
 
-	// Pass brack expression negation.
+	// Pass bracket expression negation.
 	if j < len(glob) && glob[j] == '!' {
 		j++
 	}
-	// Pass first closing braket if it is at the beginning of the
+	// Pass first closing bracket if it is at the beginning of the
 	// expression.
 	if j < len(glob) && glob[j] == ']' {
 		j++
 	}
-	// Find closing braket. Stop once we reach the end or find it.
+	// Find closing bracket. Stop once we reach the end or find it.
 	for j < len(glob) && glob[j] != ']' {
 		j++
 	}
@@ -260,8 +260,8 @@ func translateBraketExpression(i *int, glob string) string {
 		regex = regexp.QuoteMeta(glob[*i:j])
 		*i = j
 	} else {
-		// Failed to find closing braket, treat opening braket as a
-		// braket literal instead of as an expression.
+		// Failed to find closing bracket, treat opening bracket as a
+		// bracket literal instead of as an expression.
 		regex = regexp.QuoteMeta(string(glob[*i]))
 	}
 	return "[" + regex + "]"
