@@ -18,33 +18,31 @@
 package pathspec
 
 import (
-	"bytes"
-	"strings"
 	"testing"
 )
 
 func TestGitIgnore(t *testing.T) {
 	toInclude := []string{"!.#test", "~foo", "foo/foo.txt", "bar/foobar.txt", "foo/bar.txt", "/bar/foo"}
 	toIgnore := []string{".#test", "foo/#test#", "foo/bar/.foo.txt.swp", "foo/foobar/foobar.txt", "foo.txt", "test/foo.test", "test/foo/bar.test", "foo/bar", "foo/1/2/bar", "foo/foobar/abcd.txt"}
-	content := []byte(".#*\n\\#*#\n.*.sw[a-z]\n**/foobar/foobar.txt\n/foo.txt\ntest/\nfoo/**/bar\n/b[^a]r/foo\nabcd.txt")
+	content := []string{".#*", "\\#*#", ".*.sw[a-z]", "**/foobar/foobar.txt", "/foo.txt", "test/", "foo/**/bar", "/b[^a]r/foo", "abcd.txt"}
 
 	for _, f := range toInclude {
-		match, err := GitIgnore(bytes.NewReader(content), f)
+		match, err := GitIgnore(content, f)
 		if err != nil {
 			t.Fatalf("Received an unexpected error: %s", err)
 		}
 		if match {
-			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'false'", strings.Replace(string(content), "\n", ", ", -1), f, match)
+			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'false'", content, f, match)
 		}
 	}
 
 	for _, f := range toIgnore {
-		match, err := GitIgnore(bytes.NewReader(content), f)
+		match, err := GitIgnore(content, f)
 		if err != nil {
 			t.Fatalf("Received an unexpected error: %s", err)
 		}
 		if !match {
-			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'true'", strings.Replace(string(content), "\n", ", ", -1), f, match)
+			t.Errorf("GitIgnore('%s', %s) returned '%v', want 'true'", content, f, match)
 		}
 	}
 }

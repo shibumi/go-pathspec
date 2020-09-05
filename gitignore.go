@@ -18,9 +18,7 @@
 package pathspec
 
 import (
-	"bufio"
 	"bytes"
-	"io"
 	"regexp"
 	"strings"
 )
@@ -78,14 +76,8 @@ type gitIgnorePattern struct {
 //
 // Other consecutive asterisks are considered invalid.
 
-func GitIgnore(content io.Reader, name string) (ignore bool, err error) {
-	scanner := bufio.NewScanner(content)
-
-	for scanner.Scan() {
-		pattern := strings.TrimSpace(scanner.Text())
-		if len(pattern) == 0 || pattern[0] == '#' {
-			continue
-		}
+func GitIgnore(patterns []string, name string) (ignore bool, err error) {
+	for _, pattern := range patterns {
 		p := parsePattern(pattern)
 		match, err := regexp.MatchString(p.Regex, name)
 		if err != nil {
@@ -93,12 +85,12 @@ func GitIgnore(content io.Reader, name string) (ignore bool, err error) {
 		}
 		if match {
 			if p.Include {
-				return false, scanner.Err()
+				return false, nil
 			}
 			ignore = true
 		}
 	}
-	return ignore, scanner.Err()
+	return ignore, nil
 }
 
 func parsePattern(pattern string) *gitIgnorePattern {
