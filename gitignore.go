@@ -120,7 +120,7 @@ func parsePattern(pattern string) *GitIgnorePattern {
 	}
 
 	// Split pattern into segments.
-	pattern_segs := strings.Split(pattern, "/")
+	patternSegs := strings.Split(pattern, "/")
 
 	// A pattern beginning with a slash ('/') will only match paths
 	// directly on the root directory instead of any descendant paths.
@@ -129,30 +129,30 @@ func parsePattern(pattern string) *GitIgnorePattern {
 	// descendant path. This is equivilent to "**/{pattern}". So
 	// prepend with double-asterisks to make pattern relative to
 	// root.
-	if pattern_segs[0] == "" {
-		pattern_segs = pattern_segs[1:]
-	} else if pattern_segs[0] != "**" {
-		pattern_segs = append([]string{"**"}, pattern_segs...)
+	if patternSegs[0] == "" {
+		patternSegs = patternSegs[1:]
+	} else if patternSegs[0] != "**" {
+		patternSegs = append([]string{"**"}, patternSegs...)
 	}
 
 	// A pattern ending with a slash ('/') will match all descendant
 	// paths of if it is a directory but not if it is a regular file.
 	// This is equivilent to "{pattern}/**". So, set last segment to
 	// double asterisks to include all descendants.
-	if pattern_segs[len(pattern_segs)-1] == "" {
-		pattern_segs[len(pattern_segs)-1] = "**"
+	if patternSegs[len(patternSegs)-1] == "" {
+		patternSegs[len(patternSegs)-1] = "**"
 	}
 
 	// Build regular expression from pattern.
 	var expr bytes.Buffer
 	expr.WriteString("^")
-	need_slash := false
+	needSlash := false
 
-	for i, seg := range pattern_segs {
+	for i, seg := range patternSegs {
 		switch seg {
 		case "**":
 			switch {
-			case i == 0 && i == len(pattern_segs)-1:
+			case i == 0 && i == len(patternSegs)-1:
 				// A pattern consisting solely of double-asterisks ('**')
 				// will match every path.
 				expr.WriteString(".+")
@@ -160,8 +160,8 @@ func parsePattern(pattern string) *GitIgnorePattern {
 				// A normalized pattern beginning with double-asterisks
 				// ('**') will match any leading path segments.
 				expr.WriteString("(?:.+/)?")
-				need_slash = false
-			case i == len(pattern_segs)-1:
+				needSlash = false
+			case i == len(patternSegs)-1:
 				// A normalized pattern ending with double-asterisks ('**')
 				// will match any trailing path segments.
 				expr.WriteString("/.+")
@@ -169,22 +169,22 @@ func parsePattern(pattern string) *GitIgnorePattern {
 				// A pattern with inner double-asterisks ('**') will match
 				// multiple (or zero) inner path segments.
 				expr.WriteString("(?:/.+)?")
-				need_slash = true
+				needSlash = true
 			}
 		case "*":
 			// Match single path segment.
-			if need_slash {
+			if needSlash {
 				expr.WriteString("/")
 			}
 			expr.WriteString("[^/]+")
-			need_slash = true
+			needSlash = true
 		default:
 			// Match segment glob pattern.
-			if need_slash {
+			if needSlash {
 				expr.WriteString("/")
 			}
 			expr.WriteString(translateGlob(seg))
-			need_slash = true
+			needSlash = true
 		}
 	}
 	expr.WriteString("$")
