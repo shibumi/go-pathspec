@@ -71,6 +71,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -85,6 +86,8 @@ type gitIgnorePattern struct {
 func GitIgnore(patterns []string, name string) (ignore bool, err error) {
 	for _, pattern := range patterns {
 		p := parsePattern(pattern)
+		// Convert Windows paths to Unix paths
+		name = filepath.ToSlash(name)
 		match, err := regexp.MatchString(p.Regex, name)
 		if err != nil {
 			return ignore, err
@@ -113,6 +116,8 @@ func ReadGitIgnore(content io.Reader, name string) (ignore bool, err error) {
 			continue
 		}
 		p := parsePattern(pattern)
+		// Convert Windows paths to Unix paths
+		name = filepath.ToSlash(name)
 		match, err := regexp.MatchString(p.Regex, name)
 		if err != nil {
 			return ignore, err
