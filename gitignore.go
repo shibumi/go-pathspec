@@ -71,77 +71,85 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
 
-type gitIgnorePattern struct {
-	Regex   string
-	Include bool
+type GitIgnorePattern struct {
+	re      *regexp.Regexp
+	include bool
 }
 
-// GitIgnore uses a string slice of patterns for matching on a filepath string.
-// On match it returns true, otherwise false. On error it passes the error through.
-func GitIgnore(patterns []string, name string) (ignore bool, err error) {
-	for _, pattern := range patterns {
-		p := parsePattern(pattern)
-		// Convert Windows paths to Unix paths
-		name = filepath.ToSlash(name)
-		match, err := regexp.MatchString(p.Regex, name)
-		if err != nil {
-			return ignore, err
+func (p *GitIgnorePattern) Regex() *regexp.Regexp { return p.re.Copy() }
+
+func (p *GitIgnorePattern) Include() bool { return p.include }
+
+func (p *GitIgnorePattern) Match(path string) bool {
+	// Convert Windows path to Unix path
+	path = filepath.ToSlash(path)
+
+	match := p.re.MatchString(path)
+	if match {
+		if p.include {
+			return false
 		}
-		if match {
-			if p.Include {
-				return false, nil
-			}
-			ignore = true
-		}
+		return true
 	}
-	return ignore, nil
+	return false
 }
 
-// ReadGitIgnore implements the io.Reader interface for reading a gitignore file
-// line by line. It behaves exactly like the GitIgnore function. The only difference
-// is that GitIgnore works on a string slice.
-//
-// ReadGitIgnore returns a boolean value if we match or not and an error.
-func ReadGitIgnore(content io.Reader, name string) (ignore bool, err error) {
-	scanner := bufio.NewScanner(content)
+func ParsePatternsFromFile(path string) ([]*GitIgnorePattern, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return ParsePatternsFromReader(file)
+}
+
+func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
+	scanner := bufio.NewScanner(r)
+	const approximateLines = 20
+	ptrns := make([]*GitIgnorePattern, 0, approximateLines)
 
 	for scanner.Scan() {
 		pattern := strings.TrimSpace(scanner.Text())
 		if len(pattern) == 0 || pattern[0] == '#' {
 			continue
 		}
-		p := parsePattern(pattern)
-		// Convert Windows paths to Unix paths
-		name = filepath.ToSlash(name)
-		match, err := regexp.MatchString(p.Regex, name)
+		p, err := ParsePattern(pattern)
 		if err != nil {
-			return ignore, err
+			return nil, err
 		}
-		if match {
-			if p.Include {
-				return false, scanner.Err()
-			}
-			ignore = true
-		}
+		ptrns = append(ptrns, p)
 	}
-	return ignore, scanner.Err()
+	return ptrns, scanner.Err()
 }
 
-func parsePattern(pattern string) *gitIgnorePattern {
-	p := &gitIgnorePattern{}
+func ParsePatterns(patterns []string) ([]*GitIgnorePattern, error) {
+	ptrns := make([]*GitIgnorePattern, 0, len(patterns))
+	for _, pattern := range patterns {
+		p, err := ParsePattern(pattern)
+		if err != nil {
+			return nil, err
+		}
+		ptrns = append(ptrns, p)
+	}
+	return ptrns, nil
+}
+
+func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
+	p = new(GitIgnorePattern)
 
 	// An optional prefix "!" which negates the pattern; any matching file
 	// excluded by a previous pattern will become included again.
 	if strings.HasPrefix(pattern, "!") {
 		pattern = pattern[1:]
-		p.Include = true
+		p.include = true
 	} else {
-		p.Include = false
+		p.include = false
 	}
 
 	// Remove leading back-slash escape for escaped hash ('#') or
@@ -175,7 +183,9 @@ func parsePattern(pattern string) *gitIgnorePattern {
 	}
 
 	// Build regular expression from pattern.
-	var expr bytes.Buffer
+	expr := strings.Builder{}
+	const approximateExtraLen = 30
+	expr.Grow(len(pattern) + approximateExtraLen)
 	expr.WriteString("^")
 	needSlash := false
 
@@ -219,8 +229,8 @@ func parsePattern(pattern string) *gitIgnorePattern {
 		}
 	}
 	expr.WriteString("$")
-	p.Regex = expr.String()
-	return p
+	p.re, err = regexp.Compile(expr.String())
+	return p, err
 }
 
 // NOTE: This is derived from `fnmatch.translate()` and is similar to
