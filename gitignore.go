@@ -69,7 +69,6 @@ package pathspec
 
 import (
 	"bufio"
-	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -190,10 +189,11 @@ func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
 
 	// Build regular expression from pattern.
 	expr := strings.Builder{}
+	needSlash := false
+
 	const approximateExtraLen = 30
 	expr.Grow(len(pattern) + approximateExtraLen)
 	expr.WriteString("^")
-	needSlash := false
 
 	for i, seg := range patternSegs {
 		switch seg {
@@ -230,10 +230,11 @@ func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
 			if needSlash {
 				expr.WriteString("/")
 			}
-			expr.WriteString(translateGlob(seg))
+			translateGlob(&expr, seg)
 			needSlash = true
 		}
 	}
+
 	expr.WriteString("$")
 	p.re, err = regexp.Compile(expr.String())
 	return p, err
@@ -241,8 +242,7 @@ func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
 
 // NOTE: This is derived from `fnmatch.translate()` and is similar to
 // the POSIX function `fnmatch()` with the `FNM_PATHNAME` flag set.
-func translateGlob(glob string) string {
-	var regex bytes.Buffer
+func translateGlob(expr *strings.Builder, glob string) {
 	escape := false
 
 	for i := 0; i < len(glob); i++ {
@@ -251,26 +251,25 @@ func translateGlob(glob string) string {
 		switch {
 		case escape:
 			escape = false
-			regex.WriteString(regexp.QuoteMeta(string(char)))
+			expr.WriteString(regexp.QuoteMeta(string(char)))
 		case char == '\\':
 			// Escape character, escape next character.
 			escape = true
 		case char == '*':
 			// Multi-character wildcard. Match any string (except slashes),
 			// including an empty string.
-			regex.WriteString("[^/]*")
+			expr.WriteString("[^/]*")
 		case char == '?':
 			// Single-character wildcard. Match any single character (except
 			// a slash).
-			regex.WriteString("[^/]")
+			expr.WriteString("[^/]")
 		case char == '[':
-			regex.WriteString(translateBracketExpression(&i, glob))
+			translateBracketExpression(expr, &i, glob)
 		default:
 			// Regular character, escape it for regex.
-			regex.WriteString(regexp.QuoteMeta(string(char)))
+			expr.WriteString(regexp.QuoteMeta(string(char)))
 		}
 	}
-	return regex.String()
 }
 
 // Bracket expression wildcard. Except for the beginning
@@ -280,9 +279,10 @@ func translateGlob(glob string) string {
 // - "[][!]" matches ']', '[' and '!'.
 // - "[]-]" matches ']' and '-'.
 // - "[!]a-]" matches any character except ']', 'a' and '-'.
-func translateBracketExpression(i *int, glob string) string {
-	regex := string(glob[*i])
+func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
+	// Move past the opening bracket.
 	*i++
+	// From now on, use j as the index.
 	j := *i
 
 	// Pass bracket expression negation.
@@ -299,17 +299,18 @@ func translateBracketExpression(i *int, glob string) string {
 		j++
 	}
 
+	expr.WriteByte('[')
 	if j < len(glob) {
 		if glob[*i] == '!' {
-			regex = regex + "^"
+			expr.WriteByte('^')
 			*i++
 		}
-		regex = regexp.QuoteMeta(glob[*i:j])
+		expr.WriteString(regexp.QuoteMeta(glob[*i:j]))
 		*i = j
 	} else {
 		// Failed to find closing bracket, treat opening bracket as a
 		// bracket literal instead of as an expression.
-		regex = regexp.QuoteMeta(string(glob[*i]))
+		expr.WriteString(regexp.QuoteMeta(string(glob[*i])))
 	}
-	return "[" + regex + "]"
+	expr.WriteByte(']')
 }
