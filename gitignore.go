@@ -78,10 +78,14 @@ import (
 )
 
 type GitIgnorePattern struct {
+	pattern string
 	re      *regexp.Regexp
 	include bool
 }
 
+func (p *GitIgnorePattern) Pattern() string { return p.pattern }
+
+//nolint:staticcheck
 func (p *GitIgnorePattern) Regex() *regexp.Regexp { return p.re.Copy() }
 
 func (p *GitIgnorePattern) Include() bool { return p.include }
@@ -141,7 +145,9 @@ func ParsePatterns(patterns []string) ([]*GitIgnorePattern, error) {
 }
 
 func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
-	p = new(GitIgnorePattern)
+	p = &GitIgnorePattern{
+		pattern: pattern,
+	}
 
 	// An optional prefix "!" which negates the pattern; any matching file
 	// excluded by a previous pattern will become included again.
