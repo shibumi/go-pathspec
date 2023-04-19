@@ -113,7 +113,8 @@ func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
 
 	for scanner.Scan() {
 		pattern := scanner.Text()
-		if len(strings.TrimSpace(pattern)) == 0 || pattern[0] == '#' {
+		pattern = trim(pattern)
+		if skip(pattern) {
 			continue
 		}
 		p, err := parsePattern(pattern)
@@ -128,7 +129,8 @@ func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
 func ParsePatterns(patterns ...string) ([]*GitIgnorePattern, error) {
 	ptrns := make([]*GitIgnorePattern, 0, len(patterns))
 	for _, pattern := range patterns {
-		if len(strings.TrimSpace(pattern)) == 0 || pattern[0] == '#' {
+		pattern = trim(pattern)
+		if skip(pattern) {
 			continue
 		}
 		p, err := parsePattern(pattern)
@@ -154,9 +156,7 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 
 	// Remove leading back-slash escape for escaped hash ('#') or
 	// exclamation mark ('!').
-	if strings.HasPrefix(pattern, "\\") {
-		pattern = pattern[1:]
-	}
+	pattern = strings.TrimPrefix(pattern, "\\")
 
 	// Split pattern into segments.
 	patternSegs := strings.Split(pattern, "/")
@@ -308,4 +308,22 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 		expr.WriteString(regexp.QuoteMeta(string(glob[*i])))
 	}
 	expr.WriteByte(']')
+}
+
+func trim(pattern string) string {
+	if strings.HasSuffix(pattern, "\\ ") {
+		return strings.TrimLeft(pattern, " ")
+	}
+	return strings.TrimSpace(pattern)
+}
+
+func skip(pattern string) bool {
+	switch {
+	case pattern == "":
+	case len(pattern) > 0 && pattern[0] == '#':
+	case pattern == "/":
+	default:
+		return false
+	}
+	return true
 }
