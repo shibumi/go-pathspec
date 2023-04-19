@@ -118,11 +118,11 @@ func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
 	ptrns := make([]*GitIgnorePattern, 0, approximateLines)
 
 	for scanner.Scan() {
-		pattern := strings.TrimSpace(scanner.Text())
-		if len(pattern) == 0 || pattern[0] == '#' {
+		pattern := scanner.Text()
+		if len(strings.TrimSpace(pattern)) == 0 || pattern[0] == '#' {
 			continue
 		}
-		p, err := ParsePattern(pattern)
+		p, err := parsePattern(pattern)
 		if err != nil {
 			return nil, err
 		}
@@ -131,10 +131,13 @@ func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
 	return ptrns, scanner.Err()
 }
 
-func ParsePatterns(patterns []string) ([]*GitIgnorePattern, error) {
+func ParsePatterns(patterns ...string) ([]*GitIgnorePattern, error) {
 	ptrns := make([]*GitIgnorePattern, 0, len(patterns))
 	for _, pattern := range patterns {
-		p, err := ParsePattern(pattern)
+		if len(strings.TrimSpace(pattern)) == 0 || pattern[0] == '#' {
+			continue
+		}
+		p, err := parsePattern(pattern)
 		if err != nil {
 			return nil, err
 		}
@@ -143,7 +146,7 @@ func ParsePatterns(patterns []string) ([]*GitIgnorePattern, error) {
 	return ptrns, nil
 }
 
-func ParsePattern(pattern string) (p *GitIgnorePattern, err error) {
+func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 	p = &GitIgnorePattern{
 		pattern: pattern,
 	}
