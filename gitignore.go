@@ -79,7 +79,7 @@ import (
 type GitIgnorePattern struct {
 	pattern string
 	re      *regexp.Regexp
-	include bool
+	negate  bool
 }
 
 func (p *GitIgnorePattern) Pattern() string { return p.pattern }
@@ -87,20 +87,14 @@ func (p *GitIgnorePattern) Pattern() string { return p.pattern }
 //nolint:staticcheck
 func (p *GitIgnorePattern) Regex() *regexp.Regexp { return p.re.Copy() }
 
-func (p *GitIgnorePattern) Include() bool { return p.include }
+func (p *GitIgnorePattern) Negate() bool { return p.negate }
 
 func (p *GitIgnorePattern) Match(path string) bool {
-	// Convert Windows path to Unix path
-	path = filepath.ToSlash(path)
-
-	match := p.re.MatchString(path)
-	if match {
-		if p.include {
-			return false
-		}
-		return true
+	if p.negate {
+		return false
 	}
-	return false
+	path = filepath.ToSlash(path) // Convert Windows path to Unix path
+	return p.re.MatchString(path)
 }
 
 func ParsePatternsFromFile(path string) ([]*GitIgnorePattern, error) {
@@ -155,9 +149,7 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 	// excluded by a previous pattern will become included again.
 	if strings.HasPrefix(pattern, "!") {
 		pattern = pattern[1:]
-		p.include = true
-	} else {
-		p.include = false
+		p.negate = true
 	}
 
 	// Remove leading back-slash escape for escaped hash ('#') or
