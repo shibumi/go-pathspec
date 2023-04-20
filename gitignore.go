@@ -78,7 +78,7 @@ import (
 )
 
 // The regex group name for the directory marker.
-const dirMark = "ps_d"
+const DirMark = "ps_d"
 
 type GitIgnorePattern struct {
 	pattern string
@@ -162,7 +162,7 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 
 	// Remove leading back-slash escape for escaped hash ('#') or
 	// exclamation mark ('!').
-	pattern = strings.TrimPrefix(pattern, "\\")
+	pattern = strings.TrimPrefix(pattern, `\`)
 
 	// Split pattern into segments.
 	patternSegs := strings.Split(pattern, "/")
@@ -184,7 +184,7 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 	// individual files in the root directory. This case cannot be
 	// adequately handled through normalization. Use the override.
 	if len(patternSegs) == 2 && patternSegs[0] == "**" && patternSegs[1] == "" {
-		p.re = regexp.MustCompile(fmt.Sprintf("^.+(?P<%s>/).*$", dirMark))
+		p.re = regexp.MustCompile(fmt.Sprintf("^.+(?P<%s>/).*$", DirMark))
 		return p, nil
 	}
 
@@ -225,6 +225,7 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 	// Build regular expression from pattern.
 	expr := strings.Builder{}
 	needSlash := false
+	end := len(patternSegs) - 1
 
 	const approximateExtraLen = 30
 	expr.Grow(len(pattern) + approximateExtraLen)
@@ -234,19 +235,19 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 		switch seg {
 		case "**":
 			switch {
-			case i == 0 && i == len(patternSegs)-1:
+			case i == 0 && i == end:
 				// A pattern consisting solely of double-asterisks ('**')
 				// will match every path.
-				expr.WriteString(".+")
+				expr.WriteString(fmt.Sprintf("[^/]+(?:(?P<%s>/).*)?", DirMark))
 			case i == 0:
 				// A normalized pattern beginning with double-asterisks
 				// ('**') will match any leading path segments.
 				expr.WriteString("(?:.+/)?")
 				needSlash = false
-			case i == len(patternSegs)-1:
+			case i == end:
 				// A normalized pattern ending with double-asterisks ('**')
 				// will match any trailing path segments.
-				expr.WriteString("/.+")
+				expr.WriteString(fmt.Sprintf("(?P<%s>/).*", DirMark))
 			default:
 				// A pattern with inner double-asterisks ('**') will match
 				// multiple (or zero) inner path segments.
@@ -259,6 +260,12 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 				expr.WriteString("/")
 			}
 			expr.WriteString("[^/]+")
+			if i == end {
+				// A pattern ending without a slash ('/') will match a file
+				// or a directory (with paths underneath it). E.g., "foo"
+				// matches "foo", "foo/bar", "foo/bar/baz", etc.
+				expr.WriteString(fmt.Sprintf("(?:(?P<%s>/).*)?", DirMark))
+			}
 			needSlash = true
 		default:
 			// Match segment glob pattern.
@@ -266,6 +273,12 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 				expr.WriteString("/")
 			}
 			translateGlob(&expr, seg)
+			if i == end {
+				// A pattern ending without a slash ('/') will match a file
+				// or a directory (with paths underneath it). E.g., "foo"
+				// matches "foo", "foo/bar", "foo/bar/baz", etc.
+				expr.WriteString(fmt.Sprintf("(?:(?P<%s>/).*)?", DirMark))
+			}
 			needSlash = true
 		}
 	}
@@ -334,10 +347,28 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 		j++
 	}
 
-	expr.WriteByte('[')
 	if j < len(glob) {
+		// Found end of bracket expression. Increment j to be one past
+		// the closing bracket:
+		//
+		//  [...]
+		//   ^   ^
+		//   i   j
+		//
+
+		j++
+		expr.WriteByte('[')
+
 		if glob[*i] == '!' {
 			expr.WriteByte('^')
+			*i++
+		} else if glob[*i] == '^' {
+			// POSIX declares that the regex bracket expression negation
+			// "[^...]" is undefined in a glob pattern. Python's
+			// `fnmatch.translate()` escapes the caret ('^') as a
+			// literal. To maintain consistency with undefined behavior,
+			// I am escaping the '^' as well.
+			expr.WriteString(`\^`)
 			*i++
 		}
 		expr.WriteString(regexp.QuoteMeta(glob[*i:j]))
@@ -345,13 +376,13 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 	} else {
 		// Failed to find closing bracket, treat opening bracket as a
 		// bracket literal instead of as an expression.
-		expr.WriteString(regexp.QuoteMeta(string(glob[*i])))
+		expr.WriteString(`\[`)
 	}
 	expr.WriteByte(']')
 }
 
 func trim(pattern string) string {
-	if strings.HasSuffix(pattern, "\\ ") {
+	if strings.HasSuffix(pattern, `\ `) {
 		return strings.TrimLeft(pattern, " ")
 	}
 	return strings.TrimSpace(pattern)
