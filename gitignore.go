@@ -69,12 +69,16 @@ package pathspec
 
 import (
 	"bufio"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+// The regex group name for the directory marker.
+const dirMark = "ps_d"
 
 type GitIgnorePattern struct {
 	pattern string
@@ -161,24 +165,58 @@ func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
 	// Split pattern into segments.
 	patternSegs := strings.Split(pattern, "/")
 
-	// A pattern beginning with a slash ('/') will only match paths
-	// directly on the root directory instead of any descendant paths.
-	// So remove empty first segment to make pattern absoluut to root.
-	// A pattern without a beginning slash ('/') will match any
-	// descendant path. This is equivilent to "**/{pattern}". So
-	// prepend with double-asterisks to make pattern relative to
-	// root.
+	// EDGE CASE: Deal with duplicate double-asterisk sequences.
+	// Collapse each sequence down to one double-asterisk. Iterate over
+	// the segments in reverse and remove the duplicate double
+	// asterisks as we go.
+	for i := len(patternSegs) - 1; i > 0; i-- {
+		prev := patternSegs[i-1]
+		seg := patternSegs[i]
+		if prev == "**" && seg == "**" {
+			// Remove
+			patternSegs = append(patternSegs[:i], patternSegs[i+1:]...)
+		}
+	}
+
+	// EDGE CASE: The '**/' pattern should match everything except
+	// individual files in the root directory. This case cannot be
+	// adequately handled through normalization. Use the override.
+	if len(patternSegs) == 2 && patternSegs[0] == "**" && patternSegs[1] == "" {
+		p.re = regexp.MustCompile(fmt.Sprintf("^.+(?P<%s>/).*$", dirMark))
+		return p, nil
+	}
+
 	if patternSegs[0] == "" {
+		// A pattern beginning with a slash ('/') will only match paths
+		// directly on the root directory instead of any descendant paths.
+		// So remove empty first segment to make pattern absoluut to root.
+		// A pattern without a beginning slash ('/') will match any
+		// descendant path. This is equivilent to "**/{pattern}". So
+		// prepend with double-asterisks to make pattern relative to
+		// root.
 		patternSegs = patternSegs[1:]
-	} else if patternSegs[0] != "**" {
-		patternSegs = append([]string{"**"}, patternSegs...)
+	} else if len(patternSegs) == 1 || (len(patternSegs) == 2 && patternSegs[1] == "") {
+		// A single pattern without a beginning slash ('/') will match
+		// any descendant path. This is equivalent to "**/{pattern}". So,
+		// prepend with double-asterisks to make pattern relative to
+		// root.
+		// EDGE CASE: This also holds for a single pattern with a
+		// trailing slash (e.g. dir/).
+		if patternSegs[0] != "**" {
+			patternSegs = append([]string{"**"}, patternSegs...)
+		}
+	} else {
+		// EDGE CASE: A pattern without a beginning slash ('/') but
+		// contains at least one prepended directory (e.g.
+		// "dir/{pattern}") should not match "**/dir/{pattern}",
+		// according to `git check-ignore` (v2.4.1).
 	}
 
 	// A pattern ending with a slash ('/') will match all descendant
 	// paths of if it is a directory but not if it is a regular file.
 	// This is equivalent to "{pattern}/**". So, set last segment to
 	// double asterisks to include all descendants.
-	if patternSegs[len(patternSegs)-1] == "" {
+	if patternSegs[len(patternSegs)-1] == "" && len(patternSegs) > 1 {
 		patternSegs[len(patternSegs)-1] = "**"
 	}
 
