@@ -15,63 +15,10 @@
 // limitations under the License.
 //
 
-// Package pathspec implements git compatible gitignore pattern matching.
-// See the description below, if you are unfamiliar with it:
-//
-// A blank line matches no files, so it can serve as a separator for readability.
-//
-// A line starting with # serves as a comment. Put a backslash ("\") in front of
-// the first hash for patterns that begin with a hash.
-//
-// An optional prefix "!" which negates the pattern; any matching file excluded
-// by a previous pattern will become included again. If a negated pattern matches,
-// this will override lower precedence patterns sources. Put a backslash ("\") in
-// front of the first "!" for patterns that begin with a literal "!", for example,
-// "\!important!.txt".
-//
-// If the pattern ends with a slash, it is removed for the purpose of the following
-// description, but it would only find a match with a directory. In other words,
-// foo/ will match a directory foo and paths underneath it, but will not match a
-// regular file or a symbolic link foo (this is consistent with the way how pathspec
-// works in general in Git).
-//
-// If the pattern does not contain a slash /, Git treats it as a shell glob pattern
-// and checks for a match against the pathname relative to the location of the
-// .gitignore file (relative to the toplevel of the work tree if not from a
-// .gitignore file).
-//
-// Otherwise, Git treats the pattern as a shell glob suitable for consumption by
-// fnmatch(3) with the FNM_PATHNAME flag: wildcards in the pattern will not match
-// a / in the pathname. For example, "Documentation/*.html" matches
-// "Documentation/git.html" but not "Documentation/ppc/ppc.html" or/
-// "tools/perf/Documentation/perf.html".
-//
-// A leading slash matches the beginning of the pathname. For example, "/*.c"
-// matches "cat-file.c" but not "mozilla-sha1/sha1.c".
-//
-// Two consecutive asterisks ("**") in patterns matched against full pathname
-// may have special meaning:
-//
-// A leading "**" followed by a slash means match in all directories. For example,
-// "**/foo" matches file or directory "foo" anywhere, the same as pattern "foo".
-// "**/foo/bar" matches file or directory "bar" anywhere that is directly under
-// directory "foo".
-//
-// A trailing "/" matches everything inside. For example, "abc/" matches all files
-// inside directory "abc", relative to the location of the .gitignore file, with
-// infinite depth.
-//
-// A slash followed by two consecutive asterisks then a slash matches zero or more
-// directories. For example, "a/**/b" matches "a/b", "a/x/b", "a/x/y/b" and so on.
-//
-// Other consecutive asterisks are considered invalid.
 package pathspec
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -80,76 +27,28 @@ import (
 // The regex group name for the directory marker.
 const DirMark = "ps_d"
 
-type GitIgnorePattern struct {
+type Pattern struct {
 	pattern string
 	re      *regexp.Regexp
 	negate  bool
 }
 
-func (p *GitIgnorePattern) Pattern() string { return p.pattern }
+func (p *Pattern) Pattern() string { return p.pattern }
 
 //nolint:staticcheck
-func (p *GitIgnorePattern) Regex() *regexp.Regexp { return p.re.Copy() }
+func (p *Pattern) Regex() *regexp.Regexp { return p.re.Copy() }
 
-func (p *GitIgnorePattern) Negate() bool { return p.negate }
+func (p *Pattern) Negate() bool { return p.negate }
 
-func (p *GitIgnorePattern) Match(path string) bool {
-	if p.negate {
-		return false
-	}
+func (p *Pattern) Match(path string) bool {
 	path = filepath.ToSlash(path) // Convert Windows path to Unix path
 	path = strings.TrimPrefix(path, "/")
 	path = strings.TrimPrefix(path, "./")
 	return p.re.MatchString(path)
 }
 
-func ParsePatternsFromFile(path string) ([]*GitIgnorePattern, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	return ParsePatternsFromReader(file)
-}
-
-func ParsePatternsFromReader(r io.Reader) ([]*GitIgnorePattern, error) {
-	scanner := bufio.NewScanner(r)
-	const approximateLines = 20
-	ptrns := make([]*GitIgnorePattern, 0, approximateLines)
-
-	for scanner.Scan() {
-		pattern := scanner.Text()
-		pattern = trim(pattern)
-		if skip(pattern) {
-			continue
-		}
-		p, err := parsePattern(pattern)
-		if err != nil {
-			return nil, err
-		}
-		ptrns = append(ptrns, p)
-	}
-	return ptrns, scanner.Err()
-}
-
-func ParsePatterns(patterns ...string) ([]*GitIgnorePattern, error) {
-	ptrns := make([]*GitIgnorePattern, 0, len(patterns))
-	for _, pattern := range patterns {
-		pattern = trim(pattern)
-		if skip(pattern) {
-			continue
-		}
-		p, err := parsePattern(pattern)
-		if err != nil {
-			return nil, err
-		}
-		ptrns = append(ptrns, p)
-	}
-	return ptrns, nil
-}
-
-func parsePattern(pattern string) (p *GitIgnorePattern, err error) {
-	p = &GitIgnorePattern{
+func parsePattern(pattern string) (p *Pattern, err error) {
+	p = &Pattern{
 		pattern: pattern,
 	}
 
@@ -379,22 +278,4 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 		expr.WriteString(`\[`)
 	}
 	expr.WriteByte(']')
-}
-
-func trim(pattern string) string {
-	if strings.HasSuffix(pattern, `\ `) {
-		return strings.TrimLeft(pattern, " ")
-	}
-	return strings.TrimSpace(pattern)
-}
-
-func skip(pattern string) bool {
-	switch {
-	case pattern == "":
-	case len(pattern) > 0 && pattern[0] == '#':
-	case pattern == "/":
-	default:
-		return false
-	}
-	return true
 }
