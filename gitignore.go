@@ -98,6 +98,8 @@ func (p *GitIgnorePattern) Match(path string) bool {
 		return false
 	}
 	path = filepath.ToSlash(path) // Convert Windows path to Unix path
+	path = strings.TrimPrefix(path, "/")
+	path = strings.TrimPrefix(path, "./")
 	return p.re.MatchString(path)
 }
 
