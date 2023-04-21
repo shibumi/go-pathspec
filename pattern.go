@@ -254,7 +254,6 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 		//   ^   ^
 		//   i   j
 		//
-
 		j++
 		expr.WriteByte('[')
 
@@ -270,12 +269,16 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 			expr.WriteString(`\^`)
 			*i++
 		}
-		expr.WriteString(regexp.QuoteMeta(glob[*i:j]))
-		*i = j
+		expr.WriteString(strings.ReplaceAll(glob[*i:j], `\`, `\\`))
+		// Subtract 1 because i will be incremented at the end
+		// of the for loop of translateGlob
+		*i = j - 1
 	} else {
 		// Failed to find closing bracket, treat opening bracket as a
 		// bracket literal instead of as an expression.
 		expr.WriteString(`\[`)
+		// Subtract 1 because i will be incremented at the end
+		// of the for loop of translateGlob
+		*i--
 	}
-	expr.WriteByte(']')
 }

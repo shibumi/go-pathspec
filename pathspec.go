@@ -85,18 +85,18 @@ func FromLines(lines ...string) (*PathSpec, error) {
 	return &PathSpec{ptrns}, nil
 }
 
-func trim(pattern string) string {
-	if strings.HasSuffix(pattern, `\ `) {
-		return strings.TrimLeft(pattern, " ")
+func trim(line string) string {
+	if strings.HasSuffix(line, `\ `) {
+		return strings.TrimLeft(line, " ")
 	}
-	return strings.TrimSpace(pattern)
+	return strings.TrimSpace(line)
 }
 
-func skip(pattern string) bool {
+func skip(line string) bool {
 	switch {
-	case pattern == "":
-	case len(pattern) > 0 && pattern[0] == '#':
-	case pattern == "/":
+	case line == "":
+	case len(line) > 0 && line[0] == '#':
+	case line == "/":
 	default:
 		return false
 	}
