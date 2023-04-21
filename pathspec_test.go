@@ -8,6 +8,32 @@ import (
 	"testing"
 )
 
+func TestMatchP(t *testing.T) {
+	p, err := FromLines(
+		"deadbeef",
+		"!/x/deadbeef",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pattern, match := p.MatchP("deadbeef")
+	if !match {
+		t.Fatal("should've been matched")
+	}
+	if pattern.Pattern() != "deadbeef" {
+		t.Fatalf("expected deadbeef, got %s", pattern.Pattern())
+	}
+
+	pattern, match = p.MatchP("x/deadbeef")
+	if match {
+		t.Fatal("shouldn't have been matched")
+	}
+	if pattern.Pattern() != "!/x/deadbeef" {
+		t.Fatalf("expected !/x/deadbeef, got %s", pattern.Pattern())
+	}
+}
+
 func TestNegate(t *testing.T) {
 	p, err := FromLines(
 		"dead",

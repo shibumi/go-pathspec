@@ -1,45 +1,63 @@
 # go-pathspec
 
-[![build](https://github.com/shibumi/go-pathspec/workflows/build/badge.svg)](https://github.com/shibumi/go-pathspec/actions?query=workflow%3Abuild) [![Coverage Status](https://coveralls.io/repos/github/shibumi/go-pathspec/badge.svg)](https://coveralls.io/github/shibumi/go-pathspec) [![PkgGoDev](https://pkg.go.dev/badge/github.com/shibumi/go-pathspec)](https://pkg.go.dev/github.com/shibumi/go-pathspec)
+[![build](https://github.com/shibumi/go-pathspec/workflows/build/badge.svg)](https://github.com/shibumi/go-pathspec/actions?query=workflow%3Abuild)
 
-go-pathspec implements gitignore-style pattern matching for paths.
+[![Coverage Status](https://coveralls.io/repos/github/shibumi/go-pathspec/badge.svg)](https://coveralls.io/github/shibumi/go-pathspec)
 
-## Alternatives
+[![PkgGoDev](https://pkg.go.dev/badge/github.com/shibumi/go-pathspec)](https://pkg.go.dev/github.com/shibumi/go-pathspec)
 
-There are a few alternatives, that try to be gitignore compatible or even state
-gitignore compatibility:
+go-pathspec is a library that implements gitignore-style pattern matching for paths and is fully compatible with Git's pathspec. Pathspec is a shorthand syntax used to specify a pattern for matching file paths in a command-line interface or a script.
 
-### https://github.com/go-git/go-git
+As of writing, this is the only Go package that fully implements pathspec. Python implementation, please refer to [python-pathspec](https://github.com/cpburnz/python-pathspec)
 
-go-git states it would be gitignore compatible, but actually they are missing a few
-special cases. This issue describes one of the not working patterns: https://github.com/go-git/go-git/issues/108
+## Usage
 
-What does not work is global filename pattern matching. Consider the following
-`.gitignore` file:
+`go get github.com/shibumi/go-pathspec`
 
-```gitignore
-# gitignore test file
-parse.go
+```go
+import "github.com/shibumi/go-pathspec"
+
+p, _ := pathspec.FromLines(...)
+
+p, _ := pathspec.FromFile("path/to/.gitignore")
+
+r := bytes.NewBufferString("...")
+p, _ := pathspec.FromReader(r)
 ```
 
-Then `parse.go` should match on all filenames called `parse.go`. You can test this via
-this shell script:
-```shell
-mkdir -p /tmp/test/internal/util
-touch /tmp/test/internal/util/parse.go
-cd /tmp/test/
-git init
-echo "parse.go" > .gitignore
+### Match
+
+**Note:** Append `/` to directories. Otherwise, patterns that end with `/` won't match — a pattern that ends with a slash indicates that it only matches with directories. It doesn't matter whether the path begins with `/` or `./`; they are trimmed.
+
+```go
+file := "main.exe"
+if p.Match(file) {
+    // This file is ignored.
+}
+
+dir := "build/"
+if p.Match(dir) {
+    // This directory is ignored.
+}
+
+err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+    if err != nil {
+        return err
+    }
+    // By default `path` doesn't have a slash prefix.
+    // If it's a directory, append it.
+    if d.Type().IsDir() {
+        path += "/"
+    }
+    if p.Match() {
+        // This file/directory is ignored.
+    }
+    return nil
+})
 ```
-
-With git `parse.go` will be excluded. The go-git implementation behaves different.
-
-### https://github.com/monochromegane/go-gitignore
-
-monochromegane's go-gitignore does not support the use of `**`-operators.
-This is not consistent to real gitignore behavior, too.
 
 ## Authors
 
-Sander van Harmelen (<sander@xanzy.io>)  
+Sander van Harmelen (<sander@vanharmelen.nl>)
 Christian Rebischke (<chris@shibumi.dev>)
+tomruk (https://github.com/tomruk)

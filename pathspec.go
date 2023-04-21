@@ -28,8 +28,13 @@ type PathSpec struct {
 	Patterns []*Pattern
 }
 
-func (p *PathSpec) Match(path string) bool {
-	match := false
+// Append `/` to directories. Otherwise patterns that end with `/`
+// won't match — a pattern that ends with a slash indicates that it
+// only matches with directories.
+//
+// It doesn't matter whether the path
+// begins with `/` or `./`; they are trimmed.
+func (p *PathSpec) Match(path string) (match bool) {
 	for _, pattern := range p.Patterns {
 		if pattern.Match(path) {
 			// match is set to true if pattern is matched and not excluded.
@@ -37,7 +42,30 @@ func (p *PathSpec) Match(path string) bool {
 			match = !pattern.negate
 		}
 	}
-	return match
+	return
+}
+
+// MatchP matches the path and returns the matching pattern.
+// Matching pattern is the last pattern that matched the path.
+// Please note that the matching pattern might be the negated
+// path that comes after the non-negated matching path.
+//
+// Append `/` to directories. Otherwise patterns that end with `/`
+// won't match — a pattern that ends with a slash indicates that it
+// only matches with directories.
+//
+// It doesn't matter whether the path
+// begins with `/` or `./`; they are trimmed.
+func (p *PathSpec) MatchP(path string) (pattern *Pattern, match bool) {
+	for _, ptrn := range p.Patterns {
+		if ptrn.Match(path) {
+			// match is set to true if pattern is matched and not excluded.
+			// Otherwise it is set to false.
+			match = !ptrn.negate
+			pattern = ptrn
+		}
+	}
+	return
 }
 
 func FromFile(path string) (*PathSpec, error) {
