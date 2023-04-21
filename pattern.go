@@ -59,10 +59,6 @@ func parsePattern(pattern string) (p *Pattern, err error) {
 		p.negate = true
 	}
 
-	// Remove leading back-slash escape for escaped hash ('#') or
-	// exclamation mark ('!').
-	pattern = strings.TrimPrefix(pattern, `\`)
-
 	// Split pattern into segments.
 	patternSegs := strings.Split(pattern, "/")
 
@@ -194,13 +190,13 @@ func translateGlob(expr *strings.Builder, glob string) {
 
 	for i := 0; i < len(glob); i++ {
 		char := glob[i]
-		// Escape the character.
+
 		switch {
 		case escape:
 			escape = false
 			expr.WriteString(regexp.QuoteMeta(string(char)))
 		case char == '\\':
-			// Escape character, escape next character.
+			// Escape the next character.
 			escape = true
 		case char == '*':
 			// Multi-character wildcard. Match any string (except slashes),

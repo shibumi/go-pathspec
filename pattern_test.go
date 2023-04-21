@@ -90,6 +90,18 @@ func TestPatterns(t *testing.T) {
 			},
 		},
 		{
+			name:           "should remove leading backslash",
+			pattern:        mustParsePattern(`\!`),
+			shouldMatch:    []string{"!"},
+			shouldNotMatch: []string{`\!`},
+		},
+		{
+			name:           "should remove leading backslash",
+			pattern:        mustParsePattern(`\#`),
+			shouldMatch:    []string{"#"},
+			shouldNotMatch: []string{`\#`},
+		},
+		{
 			name:    "**",
 			pattern: mustParsePattern("abc/**/def"),
 			shouldMatch: []string{
