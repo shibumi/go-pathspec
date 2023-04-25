@@ -6,9 +6,9 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/shibumi/go-pathspec)](https://pkg.go.dev/github.com/shibumi/go-pathspec)
 
-go-pathspec is a library that implements gitignore-style pattern matching for paths and is fully compatible with Git's pathspec. Pathspec is a shorthand syntax used to specify a pattern for matching file paths in a command-line interface or a script.
+go-pathspec is a library that implements gitignore-style pattern matching for paths and is fully compatible with Git's pathspec. Pathspec is a syntax used to specify a pattern for matching file paths in a command-line interface or a script.
 
-As of writing, this is the only Go package that fully implements pathspec. Python implementation, please refer to [python-pathspec](https://github.com/cpburnz/python-pathspec)
+As of writing, this is the only Go package that fully implements pathspec. For Python implementation, please refer to [python-pathspec](https://github.com/cpburnz/python-pathspec)
 
 ## Usage
 
@@ -58,6 +58,6 @@ err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error 
 
 ## Authors
 
-Sander van Harmelen (<sander@vanharmelen.nl>)
-Christian Rebischke (<chris@shibumi.dev>)
-tomruk (https://github.com/tomruk)
+- Sander van Harmelen (<sander@vanharmelen.nl>)
+- Christian Rebischke (<chris@shibumi.dev>)
+- tomruk (https://github.com/tomruk)
