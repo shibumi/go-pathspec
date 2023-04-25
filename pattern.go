@@ -229,7 +229,7 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 	j := *i
 
 	// Pass bracket expression negation.
-	if j < len(glob) && glob[j] == '!' {
+	if j < len(glob) && (glob[j] == '!' || glob[j] == '^') {
 		j++
 	}
 	// Pass first closing bracket if it is at the beginning of the
@@ -253,18 +253,11 @@ func translateBracketExpression(expr *strings.Builder, i *int, glob string) {
 		j++
 		expr.WriteByte('[')
 
-		if glob[*i] == '!' {
+		if glob[*i] == '!' || glob[*i] == '^' {
 			expr.WriteByte('^')
 			*i++
-		} else if glob[*i] == '^' {
-			// POSIX declares that the regex bracket expression negation
-			// "[^...]" is undefined in a glob pattern. Python's
-			// `fnmatch.translate()` escapes the caret ('^') as a
-			// literal. To maintain consistency with undefined behavior,
-			// I am escaping the '^' as well.
-			expr.WriteString(`\^`)
-			*i++
 		}
+
 		expr.WriteString(strings.ReplaceAll(glob[*i:j], `\`, `\\`))
 		// Subtract 1 because i will be incremented at the end
 		// of the for loop of translateGlob

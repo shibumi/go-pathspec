@@ -178,15 +178,16 @@ func TestPatterns(t *testing.T) {
 			shouldMatch: []string{"a", "b", "a/b", "c/d/e"},
 		},
 		{
-			name:           "excludes characters inside negated square brackets",
+			name:           "excludes characters inside square brackets negated with exclamation mark",
 			pattern:        mustParsePattern("a[!bfg]c"),
 			shouldMatch:    []string{"azc", "atc"},
 			shouldNotMatch: []string{"abc", "afc", "agc"},
 		},
 		{
-			name:        "doesn't exclude characters inside square brackets that begin with the character `^`",
-			pattern:     mustParsePattern("a[^b]c"),
-			shouldMatch: []string{"a^c", "abc"},
+			name:           "excludes characters inside square brackets negated with caret",
+			pattern:        mustParsePattern("a[^bfg]c"),
+			shouldMatch:    []string{"azc", "atc"},
+			shouldNotMatch: []string{"abc", "afc", "agc"},
 		},
 		{
 			name:        "opening square bracket is interpreted as a character if it doesn't have a closing square bracket",
